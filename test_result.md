@@ -152,15 +152,18 @@ backend:
 
   - task: "Angel One Smart API Integration"
     implemented: true
-    working: "NA"
+    working: true
     file: "angel_one_engine.py, data_engine.py, server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Created Angel One Smart API engine with mock authentication and data fetching. Added new endpoints for Angel One status, authentication, historical data, and data source comparison. Updated requirements.txt with Angel One dependencies (smartapi-python, pyotp, logzero, websocket-client, pycryptodome). Configured primary-fallback architecture with Angel One as primary and yfinance/twelvedata as fallback sources."
+      - working: true
+        agent: "testing"
+        comment: "Angel One Smart API integration is working correctly. Successfully tested Angel One status API and authentication API. The mock authentication flow is properly implemented with TOTP generation. The Angel One engine is correctly initialized with credentials from .env file."
 
   - task: "Enhanced Market Data Engine with Angel One Primary Source"
     implemented: true
