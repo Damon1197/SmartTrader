@@ -257,15 +257,18 @@ backend:
 
   - task: "Enhanced Dashboard API with Real Data"
     implemented: true
-    working: "NA"
+    working: false
     file: "server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Updated dashboard endpoint to use real-time data from market engine with fallback to mock data"
+      - working: false
+        agent: "testing"
+        comment: "Enhanced Dashboard API is not working correctly. The endpoint /api/dashboard/{user_id} returns a response with no top stocks, which causes the test to fail. This is likely related to the issue with the Live Stock Data API, as the dashboard depends on it to fetch stock data."
 
   - task: "Personalized Dashboard API"
     implemented: true
