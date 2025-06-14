@@ -15,9 +15,43 @@ from dataclasses import dataclass
 import logging
 import os
 from dotenv import load_dotenv
-from angel_one_engine import angel_one_engine, StockData, SectorData
 
 load_dotenv()
+
+# Import Angel One after environment is loaded
+import sys
+sys.path.append('/app/backend')
+
+try:
+    from angel_one_engine import angel_one_engine, StockData, SectorData
+    ANGEL_ONE_AVAILABLE = True
+except ImportError as e:
+    print(f"Angel One engine not available: {e}")
+    ANGEL_ONE_AVAILABLE = False
+    
+    # Define local classes if Angel One is not available
+    @dataclass
+    class StockData:
+        symbol: str
+        price: float
+        change: float
+        change_percent: float
+        volume: int
+        high: float
+        low: float
+        open: float
+        market_cap: Optional[float] = None
+        sector: Optional[str] = None
+        exchange: str = "NSE"
+        last_updated: datetime = None
+
+    @dataclass
+    class SectorData:
+        sector: str
+        performance: float
+        top_performers: List[str]
+        market_cap: float
+        volume: int
 
 @dataclass
 class StockData:
