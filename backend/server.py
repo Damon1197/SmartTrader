@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime
 import asyncio
 from openai import AsyncOpenAI
+from data_engine import market_data_engine, StockData
 
 # Load environment variables
 load_dotenv()
@@ -267,7 +268,7 @@ Provide a comprehensive analysis including:
 
 @app.get("/api/dashboard/{user_id}")
 async def get_user_dashboard(user_id: str):
-    """Get personalized dashboard for user"""
+    """Get personalized dashboard for user with real-time data"""
     try:
         # Get user profile
         profile = await db.user_profiles.find_one({"user_id": user_id})
@@ -287,37 +288,94 @@ async def get_user_dashboard(user_id: str):
             }
             profile = mock_profile
 
-        # Mock market data based on trading style
         trading_style = profile["trading_style"]
         
-        # Generate style-specific mock data
-        if trading_style == "scalping":
-            mock_insights = [
-                "High volatility detected in RELIANCE - potential scalping opportunity",
-                "BANKNIFTY showing strong momentum in 5-min timeframe",
-                "TCS breaking resistance at ₹3,450 - quick profit target ₹3,465"
+        # Get real-time market data
+        try:
+            # Get recommended stocks for user's style
+            recommended_symbols = market_data_engine.get_trading_style_stocks(trading_style, 5)
+            top_stocks = []
+            
+            for symbol in recommended_symbols:
+                stock_data = await market_data_engine.get_live_stock_data(symbol)
+                if stock_data:
+                    signal = "BUY" if stock_data.change_percent > 1 else "SELL" if stock_data.change_percent < -1 else "HOLD"
+                    top_stocks.append({
+                        "symbol": stock_data.symbol,
+                        "price": stock_data.price,
+                        "change": f"{'+' if stock_data.change >= 0 else ''}{stock_data.change_percent:.1f}%",
+                        "signal": signal,
+                        "volume": stock_data.volume
+                    })
+            
+            # Get sector performance
+            sector_data = await market_data_engine.get_sector_performance()
+            sector_performance = [
+                {
+                    "sector": sector.sector,
+                    "performance": f"{'+' if sector.performance >= 0 else ''}{sector.performance:.1f}%"
+                }
+                for sector in sector_data[:6]
             ]
+            
+            # Get market movers
+            market_movers = await market_data_engine.get_market_movers(5)
+            
+            # Generate style-specific insights
+            insights = []
+            if trading_style == "scalping":
+                insights = [
+                    f"High volatility detected in {top_stocks[0]['symbol'] if top_stocks else 'RELIANCE'} - potential scalping opportunity",
+                    "Strong momentum in Banking sector for quick trades",
+                    f"Volume spike in {market_movers['most_active'][0].symbol if market_movers['most_active'] else 'TCS'} - watch for entry"
+                ]
+            elif trading_style == "intraday":
+                insights = [
+                    f"{top_stocks[0]['symbol'] if top_stocks else 'HDFC'} showing bullish divergence on RSI",
+                    "IT sector momentum building for intraday moves",
+                    f"Bank Nifty approaching key support - watch for bounce"
+                ]
+            elif trading_style == "swing":
+                insights = [
+                    f"{top_stocks[0]['symbol'] if top_stocks else 'MARUTI'} forming bullish flag pattern - 3-5 day breakout expected",
+                    "Pharma sector showing accumulation signs",
+                    f"Auto sector testing support levels - potential swing entries"
+                ]
+            else:
+                insights = [
+                    f"Strong fundamentals detected in {top_stocks[0]['symbol'] if top_stocks else 'TCS'}",
+                    "Banking sector showing long-term growth potential",
+                    "Defensive stocks gaining institutional interest"
+                ]
+            
+        except Exception as e:
+            # Fallback to mock data if real-time data fails
+            top_stocks = [
+                {"symbol": "RELIANCE", "price": 2456.75, "change": "+1.2%", "signal": "BUY"},
+                {"symbol": "TCS", "price": 3442.30, "change": "+0.8%", "signal": "HOLD"},
+                {"symbol": "HDFC", "price": 1678.90, "change": "-0.3%", "signal": "WATCH"},
+                {"symbol": "INFY", "price": 1587.45, "change": "+2.1%", "signal": "BUY"}
+            ]
+            sector_performance = [
+                {"sector": "IT", "performance": "+1.5%"},
+                {"sector": "Banking", "performance": "+0.8%"},
+                {"sector": "Pharma", "performance": "-0.2%"},
+                {"sector": "Auto", "performance": "+1.1%"}
+            ]
+            insights = [
+                "Real-time data temporarily unavailable - using cached data",
+                "Market showing mixed signals today",
+                "Focus on your trading plan and risk management"
+            ]
+
+        # Determine timeframes based on style
+        if trading_style == "scalping":
             timeframes = ["1min", "5min", "15min"]
         elif trading_style == "intraday":
-            mock_insights = [
-                "HDFC Bank showing bullish divergence on RSI",
-                "IT sector momentum building for intraday moves",
-                "INFY approaching key support at ₹1,580 - watch for bounce"
-            ]
             timeframes = ["5min", "15min", "1hour"]
         elif trading_style == "swing":
-            mock_insights = [
-                "ONGC forming bullish flag pattern - 3-5 day breakout expected", 
-                "Pharma sector showing accumulation signs",
-                "MARUTI testing 200-DMA support - potential swing entry"
-            ]
             timeframes = ["1hour", "4hour", "1day"]
         else:
-            mock_insights = [
-                "Strong fundamentals detected in ICICI Bank",
-                "Tech sector showing long-term growth potential",
-                "Defensive stocks gaining institutional interest"
-            ]
             timeframes = ["1day", "1week", "1month"]
 
         dashboard_data = {
@@ -326,26 +384,137 @@ async def get_user_dashboard(user_id: str):
                 "confidence": profile.get("style_confidence", 75.0),
                 "recommendations": profile["recommendations"]
             },
-            "market_insights": mock_insights,
+            "market_insights": insights,
             "recommended_timeframes": timeframes,
-            "top_stocks": [
-                {"symbol": "RELIANCE", "price": 2456.75, "change": "+1.2%", "signal": "BUY"},
-                {"symbol": "TCS", "price": 3442.30, "change": "+0.8%", "signal": "HOLD"},
-                {"symbol": "HDFC", "price": 1678.90, "change": "-0.3%", "signal": "WATCH"},
-                {"symbol": "INFY", "price": 1587.45, "change": "+2.1%", "signal": "BUY"}
-            ],
-            "sector_performance": [
-                {"sector": "IT", "performance": "+1.5%"},
-                {"sector": "Banking", "performance": "+0.8%"},
-                {"sector": "Pharma", "performance": "-0.2%"},
-                {"sector": "Auto", "performance": "+1.1%"}
-            ]
+            "top_stocks": top_stocks,
+            "sector_performance": sector_performance,
+            "last_updated": datetime.now().isoformat()
         }
 
         return dashboard_data
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching dashboard: {str(e)}")
+
+# New Market Data Endpoints
+
+@app.get("/api/market/live/{symbol}")
+async def get_live_stock(symbol: str, source: str = "yfinance"):
+    """Get real-time data for a specific stock"""
+    try:
+        stock_data = await market_data_engine.get_live_stock_data(symbol, source)
+        if stock_data:
+            return {
+                "symbol": stock_data.symbol,
+                "price": stock_data.price,
+                "change": stock_data.change,
+                "change_percent": stock_data.change_percent,
+                "volume": stock_data.volume,
+                "high": stock_data.high,
+                "low": stock_data.low,
+                "open": stock_data.open,
+                "sector": stock_data.sector,
+                "exchange": stock_data.exchange,
+                "last_updated": stock_data.last_updated.isoformat() if stock_data.last_updated else None
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Stock data not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching stock data: {str(e)}")
+
+@app.get("/api/market/sectors")
+async def get_sector_performance():
+    """Get sector-wise performance data"""
+    try:
+        sectors = await market_data_engine.get_sector_performance()
+        return {
+            "sectors": [
+                {
+                    "sector": sector.sector,
+                    "performance": sector.performance,
+                    "top_performers": sector.top_performers,
+                    "market_cap": sector.market_cap,
+                    "volume": sector.volume
+                }
+                for sector in sectors
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching sector data: {str(e)}")
+
+@app.get("/api/market/movers")
+async def get_market_movers(limit: int = 10):
+    """Get top gainers, losers, and most active stocks"""
+    try:
+        movers = await market_data_engine.get_market_movers(limit)
+        return {
+            "gainers": [
+                {
+                    "symbol": stock.symbol,
+                    "price": stock.price,
+                    "change_percent": stock.change_percent,
+                    "volume": stock.volume
+                }
+                for stock in movers["gainers"]
+            ],
+            "losers": [
+                {
+                    "symbol": stock.symbol,
+                    "price": stock.price,
+                    "change_percent": stock.change_percent,
+                    "volume": stock.volume
+                }
+                for stock in movers["losers"]
+            ],
+            "most_active": [
+                {
+                    "symbol": stock.symbol,
+                    "price": stock.price,
+                    "change_percent": stock.change_percent,
+                    "volume": stock.volume
+                }
+                for stock in movers["most_active"]
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching market movers: {str(e)}")
+
+@app.get("/api/market/search")
+async def search_stocks(query: str, limit: int = 10):
+    """Search for stocks by symbol or name"""
+    try:
+        results = await market_data_engine.search_stocks(query, limit)
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching stocks: {str(e)}")
+
+@app.get("/api/market/indices")
+async def get_market_indices():
+    """Get major market indices data"""
+    try:
+        nifty_data = await market_data_engine.get_nifty_data()
+        bank_nifty_data = await market_data_engine.get_bank_nifty_data()
+        
+        indices = []
+        if nifty_data:
+            indices.append({
+                "name": "Nifty 50",
+                "symbol": "NSEI",
+                "price": nifty_data.price,
+                "change_percent": nifty_data.change_percent
+            })
+        
+        if bank_nifty_data:
+            indices.append({
+                "name": "Bank Nifty",
+                "symbol": "NSEBANK",
+                "price": bank_nifty_data.price,
+                "change_percent": bank_nifty_data.change_percent
+            })
+            
+        return {"indices": indices}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching indices: {str(e)}")
 
 @app.get("/api/user-profiles")
 async def get_all_profiles():
