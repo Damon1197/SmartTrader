@@ -416,8 +416,8 @@ async def get_user_dashboard(user_id: str):
 # New Market Data Endpoints
 
 @app.get("/api/market/live/{symbol}")
-async def get_live_stock(symbol: str, source: str = "yfinance"):
-    """Get real-time data for a specific stock"""
+async def get_live_stock(symbol: str, source: str = "auto"):
+    """Get real-time data for a specific stock (Angel One primary, with fallbacks)"""
     try:
         stock_data = await market_data_engine.get_live_stock_data(symbol, source)
         if stock_data:
@@ -432,12 +432,115 @@ async def get_live_stock(symbol: str, source: str = "yfinance"):
                 "open": stock_data.open,
                 "sector": stock_data.sector,
                 "exchange": stock_data.exchange,
-                "last_updated": stock_data.last_updated.isoformat() if stock_data.last_updated else None
+                "last_updated": stock_data.last_updated.isoformat() if stock_data.last_updated else None,
+                "data_source": "angel_one_primary"  # Indicate primary source
             }
         else:
             raise HTTPException(status_code=404, detail="Stock data not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching stock data: {str(e)}")
+
+# New Angel One specific endpoints
+
+@app.get("/api/angel/status")
+async def get_angel_one_status():
+    """Get Angel One API connection status"""
+    try:
+        status = {
+            "authenticated": angel_one_engine.is_session_valid(),
+            "auth_token_exists": bool(angel_one_engine.auth_token),
+            "session_expiry": angel_one_engine.session_expiry.isoformat() if angel_one_engine.session_expiry else None,
+            "available_stocks": len(angel_one_engine.nse_stock_tokens),
+            "supported_sectors": len(angel_one_engine.sector_mapping)
+        }
+        return status
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting Angel One status: {str(e)}")
+
+@app.post("/api/angel/authenticate")
+async def authenticate_angel_one():
+    """Manually trigger Angel One authentication"""
+    try:
+        success = await angel_one_engine.authenticate()
+        if success:
+            return {
+                "status": "success",
+                "message": "Angel One authentication successful",
+                "session_expiry": angel_one_engine.session_expiry.isoformat() if angel_one_engine.session_expiry else None
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Angel One authentication failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+
+@app.get("/api/angel/historical/{symbol}")
+async def get_angel_historical(symbol: str, days: int = 30, interval: str = "1day"):
+    """Get historical data specifically from Angel One"""
+    try:
+        historical_data = await angel_one_engine.get_historical_data(symbol, interval, days)
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "days": days,
+            "data": historical_data,
+            "source": "angel_one"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching historical data: {str(e)}")
+
+@app.get("/api/data-sources/comparison/{symbol}")
+async def compare_data_sources(symbol: str):
+    """Compare data from different sources for a symbol"""
+    try:
+        results = {}
+        
+        # Try Angel One
+        try:
+            angel_data = await angel_one_engine.get_live_stock_data(symbol)
+            if angel_data:
+                results["angel_one"] = {
+                    "price": angel_data.price,
+                    "change_percent": angel_data.change_percent,
+                    "volume": angel_data.volume,
+                    "status": "success"
+                }
+        except Exception as e:
+            results["angel_one"] = {"status": "failed", "error": str(e)}
+        
+        # Try yfinance
+        try:
+            yf_data = await market_data_engine.get_live_stock_data(symbol, "yfinance")
+            if yf_data:
+                results["yfinance"] = {
+                    "price": yf_data.price,
+                    "change_percent": yf_data.change_percent,
+                    "volume": yf_data.volume,
+                    "status": "success"
+                }
+        except Exception as e:
+            results["yfinance"] = {"status": "failed", "error": str(e)}
+        
+        # Try twelvedata
+        try:
+            td_data = await market_data_engine.get_live_stock_data(symbol, "twelvedata")
+            if td_data:
+                results["twelvedata"] = {
+                    "price": td_data.price,
+                    "change_percent": td_data.change_percent,
+                    "volume": td_data.volume,
+                    "status": "success"
+                }
+        except Exception as e:
+            results["twelvedata"] = {"status": "failed", "error": str(e)}
+        
+        return {
+            "symbol": symbol,
+            "comparison": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error comparing data sources: {str(e)}")
 
 @app.get("/api/market/sectors")
 async def get_sector_performance():
