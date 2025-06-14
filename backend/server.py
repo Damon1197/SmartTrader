@@ -31,7 +31,13 @@ DB_NAME = os.environ.get('DB_NAME', 'test_database')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
 # Configure OpenAI
-openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+try:
+    openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+except TypeError:
+    # Fallback for older versions of the OpenAI library
+    import openai
+    openai.api_key = OPENAI_API_KEY
+    openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 # MongoDB client
 mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URL)
