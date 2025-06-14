@@ -167,15 +167,18 @@ backend:
 
   - task: "Enhanced Market Data Engine with Angel One Primary Source"
     implemented: true
-    working: "NA"
+    working: true
     file: "data_engine.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Updated MarketDataEngine to use Angel One as primary data source with automatic fallback to yfinance and twelvedata. Added graceful error handling and logging for data source failures. Maintained existing API compatibility while adding Angel One integration."
+      - working: true
+        agent: "testing"
+        comment: "Enhanced Market Data Engine is working correctly with Angel One as the primary source. The fallback mechanism to yfinance and twelvedata is properly implemented. Sector performance and market movers APIs are working correctly with Angel One data."
 
   - task: "Angel One Authentication & Credentials Setup"
     implemented: true
