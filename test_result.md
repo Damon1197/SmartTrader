@@ -197,15 +197,18 @@ backend:
 
   - task: "New Angel One Specific API Endpoints"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added new endpoints: /api/angel/status (connection status), /api/angel/authenticate (manual auth trigger), /api/angel/historical/{symbol} (Angel One historical data), /api/data-sources/comparison/{symbol} (compare all data sources). Updated existing /api/market/live/{symbol} to use Angel One as primary source."
+      - working: true
+        agent: "testing"
+        comment: "New Angel One specific API endpoints are working correctly. Successfully tested /api/angel/status, /api/angel/authenticate, /api/angel/historical/{symbol}, and /api/data-sources/comparison/{symbol}. The historical data endpoint returns proper candlestick data with OHLCV values."
 
   - task: "Live Stock Data API"
     implemented: true
