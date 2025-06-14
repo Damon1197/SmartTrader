@@ -10,10 +10,14 @@ from datetime import datetime
 import asyncio
 from openai import AsyncOpenAI
 from data_engine import market_data_engine, StockData
-from angel_one_engine import angel_one_engine
 
 # Load environment variables
 load_dotenv()
+
+# Import Angel One engine after loading env
+import sys
+sys.path.append('/app/backend')
+from angel_one_engine import angel_one_engine
 
 app = FastAPI()
 
