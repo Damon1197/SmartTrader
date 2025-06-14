@@ -318,11 +318,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Real-Time Market Data Engine"
+    - "Angel One Smart API Integration"
+    - "Enhanced Market Data Engine with Angel One Primary Source"
+    - "Angel One Authentication & Credentials Setup"
+    - "New Angel One Specific API Endpoints"
     - "Live Stock Data API"
     - "Sector Performance API"
     - "Market Movers API"
-    - "Enhanced Dashboard API with Real Data"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
