@@ -150,7 +150,19 @@ backend:
         agent: "testing"
         comment: "Trading style classification is working correctly. The API calculates style scores based on responses, determines the primary style, and generates AI analysis using OpenAI GPT-4o. Fixed integration issue by replacing custom library with standard OpenAI API."
 
-  - task: "Real-Time Market Data Engine"
+  - task: "Angel One Smart API Integration"
+    implemented: true
+    working: "NA"
+    file: "angel_one_engine.py, data_engine.py, server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created Angel One Smart API engine with mock authentication and data fetching. Added new endpoints for Angel One status, authentication, historical data, and data source comparison. Updated requirements.txt with Angel One dependencies (smartapi-python, pyotp, logzero, websocket-client, pycryptodome). Configured primary-fallback architecture with Angel One as primary and yfinance/twelvedata as fallback sources."
+
+  - task: "Enhanced Market Data Engine with Angel One Primary Source"
     implemented: true
     working: "NA"
     file: "data_engine.py"
@@ -160,7 +172,31 @@ backend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Created modular MarketDataEngine supporting yfinance and Twelvedata APIs, NSE top 50 stocks, sector mapping, and trading style specific recommendations"
+        comment: "Updated MarketDataEngine to use Angel One as primary data source with automatic fallback to yfinance and twelvedata. Added graceful error handling and logging for data source failures. Maintained existing API compatibility while adding Angel One integration."
+
+  - task: "Angel One Authentication & Credentials Setup"
+    implemented: true
+    working: "NA"
+    file: ".env, angel_one_engine.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added Angel One API credentials to .env file including Trading API, Publisher API, Marketfeed API, Historical data API keys with client code (IIRA7535), password, and TOTP secret. Implemented TOTP-based authentication flow in Angel One engine."
+
+  - task: "New Angel One Specific API Endpoints"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added new endpoints: /api/angel/status (connection status), /api/angel/authenticate (manual auth trigger), /api/angel/historical/{symbol} (Angel One historical data), /api/data-sources/comparison/{symbol} (compare all data sources). Updated existing /api/market/live/{symbol} to use Angel One as primary source."
 
   - task: "Live Stock Data API"
     implemented: true
