@@ -242,15 +242,18 @@ backend:
 
   - task: "Market Movers API"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Endpoint /api/market/movers returning top gainers, losers, and most active stocks"
+      - working: true
+        agent: "testing"
+        comment: "Market Movers API is working correctly. The endpoint /api/market/movers returns proper data with gainers, losers, and most active stocks. Each stock has the required fields: symbol, price, change_percent, and volume."
 
   - task: "Enhanced Dashboard API with Real Data"
     implemented: true
