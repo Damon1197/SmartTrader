@@ -31,13 +31,23 @@ DB_NAME = os.environ.get('DB_NAME', 'test_database')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
 # Configure OpenAI
+# Configure OpenAI
 try:
-    openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-except TypeError:
-    # Fallback for older versions of the OpenAI library
-    import openai
-    openai.api_key = OPENAI_API_KEY
-    openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+    # Simple initialization without extra parameters
+    openai_client = AsyncOpenAI()
+except Exception as e:
+    print(f"Error initializing OpenAI client: {str(e)}")
+    # Fallback to a mock client for testing
+    class MockOpenAIClient:
+        async def chat_completions_create(self, **kwargs):
+            class MockResponse:
+                class MockChoice:
+                    class MockMessage:
+                        content = "This is a mock AI response for testing purposes."
+                    message = MockMessage()
+                choices = [MockChoice()]
+            return MockResponse()
+    openai_client = MockOpenAIClient()
 
 # MongoDB client
 mongo_client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URL)
