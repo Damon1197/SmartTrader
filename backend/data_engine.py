@@ -251,11 +251,12 @@ class MarketDataEngine:
     async def get_sector_performance(self) -> List[SectorData]:
         """Get sector-wise performance data with Angel One primary source"""
         try:
-            # Try Angel One first
-            angel_sectors = await self.angel_engine.get_sector_performance()
-            if angel_sectors:
-                self.logger.info("Successfully fetched sector data from Angel One")
-                return angel_sectors
+            # Try Angel One first if available
+            if ANGEL_ONE_AVAILABLE and self.angel_engine:
+                angel_sectors = await self.angel_engine.get_sector_performance()
+                if angel_sectors:
+                    self.logger.info("Successfully fetched sector data from Angel One")
+                    return angel_sectors
         except Exception as e:
             self.logger.warning(f"Angel One sector data failed: {str(e)}")
         
@@ -312,11 +313,12 @@ class MarketDataEngine:
     async def get_market_movers(self, limit: int = 10) -> Dict[str, List[StockData]]:
         """Get top gainers and losers with Angel One primary source"""
         try:
-            # Try Angel One first
-            angel_movers = await self.angel_engine.get_market_movers(limit)
-            if angel_movers:
-                self.logger.info("Successfully fetched market movers from Angel One")
-                return angel_movers
+            # Try Angel One first if available
+            if ANGEL_ONE_AVAILABLE and self.angel_engine:
+                angel_movers = await self.angel_engine.get_market_movers(limit)
+                if angel_movers:
+                    self.logger.info("Successfully fetched market movers from Angel One")
+                    return angel_movers
         except Exception as e:
             self.logger.warning(f"Angel One market movers failed: {str(e)}")
         
@@ -345,10 +347,11 @@ class MarketDataEngine:
     async def get_nifty_data(self) -> Optional[StockData]:
         """Get Nifty 50 index data with Angel One primary source"""
         try:
-            # Try Angel One first
-            angel_nifty = await self.angel_engine.get_nifty_data()
-            if angel_nifty:
-                return angel_nifty
+            # Try Angel One first if available
+            if ANGEL_ONE_AVAILABLE and self.angel_engine:
+                angel_nifty = await self.angel_engine.get_nifty_data()
+                if angel_nifty:
+                    return angel_nifty
         except Exception as e:
             self.logger.warning(f"Angel One Nifty data failed: {str(e)}")
         
@@ -358,10 +361,11 @@ class MarketDataEngine:
     async def get_bank_nifty_data(self) -> Optional[StockData]:
         """Get Bank Nifty index data with Angel One primary source"""
         try:
-            # Try Angel One first
-            angel_bank_nifty = await self.angel_engine.get_bank_nifty_data()
-            if angel_bank_nifty:
-                return angel_bank_nifty
+            # Try Angel One first if available
+            if ANGEL_ONE_AVAILABLE and self.angel_engine:
+                angel_bank_nifty = await self.angel_engine.get_bank_nifty_data()
+                if angel_bank_nifty:
+                    return angel_bank_nifty
         except Exception as e:
             self.logger.warning(f"Angel One Bank Nifty data failed: {str(e)}")
         
@@ -371,10 +375,11 @@ class MarketDataEngine:
     async def search_stocks(self, query: str, limit: int = 10) -> List[Dict]:
         """Search for stocks by name or symbol with Angel One primary source"""
         try:
-            # Try Angel One first
-            angel_results = await self.angel_engine.search_stocks(query, limit)
-            if angel_results:
-                return angel_results
+            # Try Angel One first if available
+            if ANGEL_ONE_AVAILABLE and self.angel_engine:
+                angel_results = await self.angel_engine.search_stocks(query, limit)
+                if angel_results:
+                    return angel_results
         except Exception as e:
             self.logger.warning(f"Angel One search failed: {str(e)}")
         
@@ -409,24 +414,25 @@ class MarketDataEngine:
     def get_trading_style_stocks(self, trading_style: str, limit: int = 5) -> List[str]:
         """Get recommended stocks based on trading style with Angel One integration"""
         try:
-            # Use Angel One recommendations
-            return self.angel_engine.get_trading_style_stocks(trading_style, limit)
+            # Use Angel One recommendations if available
+            if ANGEL_ONE_AVAILABLE and self.angel_engine:
+                return self.angel_engine.get_trading_style_stocks(trading_style, limit)
         except Exception as e:
             self.logger.warning(f"Angel One trading style stocks failed: {str(e)}")
             
-            # Fallback to original recommendations
-            style_recommendations = {
-                'scalping': ['RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'BHARTIARTL'],
-                'intraday': ['RELIANCE', 'TCS', 'HDFCBANK', 'INFOSYS', 'ITC'],
-                'swing': ['MARUTI', 'SUNPHARMA', 'ASIANPAINT', 'TITAN', 'ULTRACEMCO'],
-                'positional': ['TCS', 'INFOSYS', 'HDFCBANK', 'ICICIBANK', 'HINDUNILVR'],
-                'delivery': ['RELIANCE', 'TCS', 'HDFCBANK', 'HINDUNILVR', 'ASIANPAINT'],
-                'technical': ['RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'BHARTIARTL'],
-                'fundamental': ['TCS', 'INFOSYS', 'HDFCBANK', 'HINDUNILVR', 'ASIANPAINT'],
-                'momentum': ['ADANIENT', 'JSWSTEEL', 'TATAMOTORS', 'BHARTIARTL', 'ONGC']
-            }
-            
-            return style_recommendations.get(trading_style, self.nse_top_stocks[:limit])
+        # Fallback to original recommendations
+        style_recommendations = {
+            'scalping': ['RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'BHARTIARTL'],
+            'intraday': ['RELIANCE', 'TCS', 'HDFCBANK', 'INFOSYS', 'ITC'],
+            'swing': ['MARUTI', 'SUNPHARMA', 'ASIANPAINT', 'TITAN', 'ULTRACEMCO'],
+            'positional': ['TCS', 'INFOSYS', 'HDFCBANK', 'ICICIBANK', 'HINDUNILVR'],
+            'delivery': ['RELIANCE', 'TCS', 'HDFCBANK', 'HINDUNILVR', 'ASIANPAINT'],
+            'technical': ['RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'BHARTIARTL'],
+            'fundamental': ['TCS', 'INFOSYS', 'HDFCBANK', 'HINDUNILVR', 'ASIANPAINT'],
+            'momentum': ['ADANIENT', 'JSWSTEEL', 'TATAMOTORS', 'BHARTIARTL', 'ONGC']
+        }
+        
+        return style_recommendations.get(trading_style, self.nse_top_stocks[:limit])
 
 # Global instance
 market_data_engine = MarketDataEngine()
