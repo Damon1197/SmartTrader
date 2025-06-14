@@ -212,15 +212,18 @@ backend:
 
   - task: "Live Stock Data API"
     implemented: true
-    working: "NA"
+    working: false
     file: "server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
         comment: "New endpoint /api/market/live/{symbol} with support for multiple data sources (yfinance, twelvedata)"
+      - working: false
+        agent: "testing"
+        comment: "Live Stock Data API is not working correctly. The endpoint /api/market/live/{symbol} returns a 500 error for all tested symbols (RELIANCE, TCS, HDFCBANK) with both auto source (Angel One primary) and specific sources (yfinance, twelvedata). The error message is generic: 'Error fetching stock data'. This needs to be fixed to properly handle the data source fallback mechanism."
 
   - task: "Sector Performance API"
     implemented: true
