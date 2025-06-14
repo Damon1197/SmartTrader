@@ -83,8 +83,8 @@ class MarketDataEngine:
         self.twelvedata_api_key = os.getenv('TWELVEDATA_API_KEY')
         self.logger = logging.getLogger(__name__)
         
-        # Primary data source: Angel One
-        self.angel_engine = angel_one_engine
+        # Primary data source: Angel One (if available)
+        self.angel_engine = angel_one_engine if ANGEL_ONE_AVAILABLE else None
         
         # NSE Top 50 stocks for quick access (fallback)
         self.nse_top_stocks = [
@@ -115,8 +115,8 @@ class MarketDataEngine:
     async def get_live_stock_data(self, symbol: str, source: str = "auto") -> Optional[StockData]:
         """Get real-time stock data with Angel One primary and fallback sources"""
         try:
-            # Try Angel One first (primary source)
-            if source == "auto" or source == "angel_one":
+            # Try Angel One first (primary source) if available
+            if (source == "auto" or source == "angel_one") and ANGEL_ONE_AVAILABLE and self.angel_engine:
                 try:
                     # Clean symbol for Angel One
                     clean_symbol = symbol.replace('.NS', '').upper()
