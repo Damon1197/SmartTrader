@@ -298,8 +298,291 @@ def test_user_profiles_api():
     
     return True
 
+# New Market Data API Tests
+
+def test_live_stock_data_api():
+    """Test the live stock data API with NSE symbols"""
+    # Test with different NSE symbols
+    symbols = ["RELIANCE", "TCS", "HDFCBANK"]
+    sources = ["yfinance", "twelvedata"]
+    
+    all_passed = True
+    
+    for symbol in symbols:
+        for source in sources:
+            print(f"Testing live stock data for {symbol} using {source}")
+            
+            # Send request
+            response = requests.get(f"{API_BASE_URL}/market/live/{symbol}?source={source}")
+            
+            # Check status code
+            if response.status_code != 200:
+                print(f"Error: Received status code {response.status_code} for {symbol} using {source}")
+                print(f"Response: {response.text}")
+                
+                # If one source fails but the other works, that's acceptable
+                if source == "twelvedata" and "API key" in response.text:
+                    print("Warning: Twelvedata API key issue detected. This is an external dependency.")
+                    continue
+                
+                all_passed = False
+                continue
+            
+            # Parse response
+            data = response.json()
+            
+            # Check required fields
+            required_fields = ["symbol", "price", "change", "change_percent", "volume", 
+                              "high", "low", "open"]
+            
+            for field in required_fields:
+                if field not in data:
+                    print(f"Error: Response for {symbol} missing required field '{field}'")
+                    all_passed = False
+                    break
+            
+            print(f"Successfully retrieved data for {symbol} using {source}: Price: {data.get('price')}, Change: {data.get('change_percent')}%")
+    
+    return all_passed
+
+def test_sector_performance_api():
+    """Test the sector performance API"""
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/market/sectors")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check if sectors exist
+    if "sectors" not in data:
+        print("Error: 'sectors' field missing from response")
+        return False
+    
+    sectors = data["sectors"]
+    
+    # Check if we have sectors
+    if not sectors:
+        print("Error: No sectors returned")
+        return False
+    
+    # Check structure of each sector
+    for i, sector in enumerate(sectors):
+        # Check required fields
+        required_fields = ["sector", "performance", "top_performers", "market_cap", "volume"]
+        for field in required_fields:
+            if field not in sector:
+                print(f"Error: Sector {i+1} missing required field '{field}'")
+                return False
+    
+    print(f"Successfully verified {len(sectors)} sectors with proper structure")
+    
+    # Print top performing sectors
+    sorted_sectors = sorted(sectors, key=lambda x: x["performance"], reverse=True)
+    print("Top performing sectors:")
+    for sector in sorted_sectors[:3]:
+        print(f"- {sector['sector']}: {sector['performance']}%")
+    
+    return True
+
+def test_market_movers_api():
+    """Test the market movers API"""
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/market/movers")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check required sections
+    required_sections = ["gainers", "losers", "most_active"]
+    
+    for section in required_sections:
+        if section not in data:
+            print(f"Error: Market movers missing required section '{section}'")
+            return False
+        
+        # Check if we have data in each section
+        if not data[section]:
+            print(f"Warning: No data in '{section}' section")
+            continue
+        
+        # Check structure of each stock
+        for i, stock in enumerate(data[section]):
+            # Check required fields
+            required_fields = ["symbol", "price", "change_percent", "volume"]
+            for field in required_fields:
+                if field not in stock:
+                    print(f"Error: Stock {i+1} in {section} missing required field '{field}'")
+                    return False
+    
+    # Print top gainers and losers
+    if data["gainers"]:
+        print("Top gainers:")
+        for stock in data["gainers"][:3]:
+            print(f"- {stock['symbol']}: {stock['change_percent']}%")
+    
+    if data["losers"]:
+        print("Top losers:")
+        for stock in data["losers"][:3]:
+            print(f"- {stock['symbol']}: {stock['change_percent']}%")
+    
+    return True
+
+def test_stock_search_api():
+    """Test the stock search API"""
+    # Test with different search queries
+    queries = ["REL", "TC", "HDFC"]
+    
+    all_passed = True
+    
+    for query in queries:
+        print(f"Testing stock search with query: {query}")
+        
+        # Send request
+        response = requests.get(f"{API_BASE_URL}/market/search?query={query}")
+        
+        # Check status code
+        if response.status_code != 200:
+            print(f"Error: Received status code {response.status_code} for query '{query}'")
+            print(f"Response: {response.text}")
+            all_passed = False
+            continue
+        
+        # Parse response
+        data = response.json()
+        
+        # Check if results exist
+        if "results" not in data:
+            print(f"Error: 'results' field missing from response for query '{query}'")
+            all_passed = False
+            continue
+        
+        results = data["results"]
+        
+        # It's okay if no results are found for a query
+        if not results:
+            print(f"No results found for query '{query}'")
+            continue
+        
+        # Check structure of each result
+        for i, result in enumerate(results):
+            # Check required fields
+            required_fields = ["symbol", "name", "price", "change_percent"]
+            for field in required_fields:
+                if field not in result:
+                    print(f"Error: Result {i+1} for query '{query}' missing required field '{field}'")
+                    all_passed = False
+                    break
+        
+        print(f"Successfully found {len(results)} results for query '{query}'")
+    
+    return all_passed
+
+def test_market_indices_api():
+    """Test the market indices API"""
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/market/indices")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check if indices exist
+    if "indices" not in data:
+        print("Error: 'indices' field missing from response")
+        return False
+    
+    indices = data["indices"]
+    
+    # Check if we have indices
+    if not indices:
+        print("Error: No indices returned")
+        return False
+    
+    # Check structure of each index
+    for i, index in enumerate(indices):
+        # Check required fields
+        required_fields = ["name", "symbol", "price", "change_percent"]
+        for field in required_fields:
+            if field not in index:
+                print(f"Error: Index {i+1} missing required field '{field}'")
+                return False
+    
+    # Print indices data
+    print("Market indices:")
+    for index in indices:
+        print(f"- {index['name']}: {index['price']} ({'+' if index['change_percent'] >= 0 else ''}{index['change_percent']}%)")
+    
+    return True
+
+def test_enhanced_dashboard_api():
+    """Test the enhanced dashboard API with real-time data integration"""
+    # Generate a unique user ID for testing
+    user_id = str(uuid.uuid4())
+    
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/dashboard/{user_id}")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check required sections
+    required_sections = ["user_profile", "market_insights", "recommended_timeframes", 
+                        "top_stocks", "sector_performance", "last_updated"]
+    
+    for section in required_sections:
+        if section not in data:
+            print(f"Error: Dashboard missing required section '{section}'")
+            return False
+    
+    # Check top stocks for real-time data
+    top_stocks = data["top_stocks"]
+    if not top_stocks:
+        print("Error: No top stocks returned")
+        return False
+    
+    # Check if we have volume data (indicator of real-time data)
+    for stock in top_stocks:
+        if "volume" not in stock:
+            print(f"Warning: Stock {stock['symbol']} missing volume data, might not be using real-time data")
+    
+    # Check if we have a last_updated timestamp
+    if not data["last_updated"]:
+        print("Error: No last_updated timestamp")
+        return False
+    
+    print(f"Successfully verified enhanced dashboard with real-time data integration")
+    print(f"Dashboard last updated at: {data['last_updated']}")
+    
+    return True
+
 def run_all_tests():
     """Run all tests in sequence"""
+    # Phase 1 Tests
+    print("\n===== PHASE 1 TESTS =====")
+    
     # Test questionnaire API
     questionnaire_result = run_test("Questionnaire API", test_questionnaire_api)
     
@@ -311,13 +594,29 @@ def run_all_tests():
         if assessment_result:
             user_id = assessment_test()
     
-    # Test dashboard API
-    if user_id:
-        dashboard_test = lambda: test_dashboard_api(user_id)
-        run_test("Dashboard API", dashboard_test)
-    
     # Test user profiles API
     run_test("User Profiles API", test_user_profiles_api)
+    
+    # Phase 2 Tests - Real-Time Market Data Integration
+    print("\n===== PHASE 2 TESTS - REAL-TIME MARKET DATA =====")
+    
+    # Test live stock data API
+    run_test("Live Stock Data API", test_live_stock_data_api)
+    
+    # Test sector performance API
+    run_test("Sector Performance API", test_sector_performance_api)
+    
+    # Test market movers API
+    run_test("Market Movers API", test_market_movers_api)
+    
+    # Test stock search API
+    run_test("Stock Search API", test_stock_search_api)
+    
+    # Test market indices API
+    run_test("Market Indices API", test_market_indices_api)
+    
+    # Test enhanced dashboard API
+    run_test("Enhanced Dashboard API", test_enhanced_dashboard_api)
     
     # Print summary
     print(f"\n{'='*80}\nTest Summary\n{'='*80}")
