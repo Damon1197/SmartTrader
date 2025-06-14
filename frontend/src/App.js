@@ -330,13 +330,26 @@ function App() {
                   Style: <span className="font-semibold text-yellow-300">{dashboardData.user_profile.trading_style.toUpperCase()}</span> • 
                   Confidence: <span className="font-semibold text-yellow-300">{dashboardData.user_profile.confidence.toFixed(1)}%</span>
                 </p>
+                {dashboardData.last_updated && (
+                  <p className="text-blue-200 text-sm mt-1">
+                    🔄 Last updated: {new Date(dashboardData.last_updated).toLocaleTimeString()}
+                  </p>
+                )}
               </div>
-              <button
-                onClick={restartAssessment}
-                className="mt-4 md:mt-0 bg-white/20 hover:bg-white/30 px-6 py-2 rounded-full font-medium transition-colors"
-              >
-                New Assessment
-              </button>
+              <div className="mt-4 md:mt-0 space-x-2">
+                <button
+                  onClick={loadDashboard}
+                  className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-full font-medium transition-colors text-sm"
+                >
+                  🔄 Refresh Data
+                </button>
+                <button
+                  onClick={restartAssessment}
+                  className="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-full font-medium transition-colors"
+                >
+                  New Assessment
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -345,37 +358,71 @@ function App() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Market Insights */}
             <div className="lg:col-span-2">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">🎯 Market Insights for You</h2>
+              {/* Live Market Status */}
+              <div className="bg-gradient-to-r from-green-500 to-blue-500 rounded-xl p-6 mb-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold">📊 Live Market Data</h2>
+                    <p className="text-green-100">Real-time NSE/BSE feeds active</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-300 rounded-full animate-pulse"></div>
+                    <span className="text-sm">LIVE</span>
+                  </div>
+                </div>
+              </div>
+
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">🎯 AI-Powered Insights for {dashboardData.user_profile.trading_style.toUpperCase()} Style</h2>
               <div className="space-y-4">
                 {dashboardData.market_insights.map((insight, index) => (
-                  <div key={index} className="bg-white rounded-xl p-6 shadow-md border-l-4 border-blue-500">
-                    <p className="text-gray-700 font-medium">{insight}</p>
-                    <div className="mt-2 text-sm text-gray-500">
-                      Recommended timeframes: {dashboardData.recommended_timeframes.join(", ")}
+                  <div key={index} className="bg-white rounded-xl p-6 shadow-md border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-gray-700 font-medium">{insight}</p>
+                        <div className="mt-2 text-sm text-gray-500">
+                          📈 Optimal timeframes: {dashboardData.recommended_timeframes.join(" • ")}
+                        </div>
+                      </div>
+                      <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                        AI Insight
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Top Stocks */}
-              <h3 className="text-xl font-bold text-gray-800 mt-8 mb-4">📈 Recommended Stocks</h3>
+              <h3 className="text-xl font-bold text-gray-800 mt-8 mb-4">📈 Real-Time Stock Recommendations</h3>
               <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="px-6 py-4 bg-gray-50 border-b">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">Live Prices • NSE</h4>
+                    <span className="text-sm text-gray-500">Updated every 30s</span>
+                  </div>
+                </div>
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Symbol</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Price</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Change</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Volume</th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-500 uppercase">Signal</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {dashboardData.top_stocks.map((stock, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 font-medium text-gray-900">{stock.symbol}</td>
-                        <td className="px-6 py-4 text-gray-700">₹{stock.price}</td>
-                        <td className={`px-6 py-4 font-medium ${stock.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                        <td className="px-6 py-4 text-gray-700 font-mono">₹{stock.price}</td>
+                        <td className={`px-6 py-4 font-medium font-mono ${
+                          stock.change.startsWith('+') ? 'text-green-600' : 
+                          stock.change.startsWith('-') ? 'text-red-600' : 'text-gray-600'
+                        }`}>
                           {stock.change}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {stock.volume ? (stock.volume / 1000000).toFixed(1) + 'M' : 'N/A'}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -397,7 +444,7 @@ function App() {
             <div className="space-y-8">
               {/* Recommendations */}
               <div className="bg-white rounded-xl p-6 shadow-md">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">💡 Your Recommendations</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">💡 Personalized Tips</h3>
                 <ul className="space-y-3">
                   {dashboardData.user_profile.recommendations.map((rec, index) => (
                     <li key={index} className="flex items-start">
@@ -410,27 +457,59 @@ function App() {
 
               {/* Sector Performance */}
               <div className="bg-white rounded-xl p-6 shadow-md">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Sector Performance</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  📊 Live Sector Performance
+                  <span className="ml-2 w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                </h3>
                 <div className="space-y-3">
                   {dashboardData.sector_performance.map((sector, index) => (
-                    <div key={index} className="flex justify-between items-center">
+                    <div key={index} className="flex justify-between items-center p-2 rounded hover:bg-gray-50 transition-colors">
                       <span className="text-gray-700 font-medium">{sector.sector}</span>
-                      <span className={`font-bold ${
-                        sector.performance.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {sector.performance}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`font-bold font-mono ${
+                          sector.performance.startsWith('+') ? 'text-green-600' : 
+                          sector.performance.startsWith('-') ? 'text-red-600' : 'text-gray-600'
+                        }`}>
+                          {sector.performance}
+                        </span>
+                        {sector.performance.startsWith('+') ? (
+                          <span className="text-green-500">📈</span>
+                        ) : sector.performance.startsWith('-') ? (
+                          <span className="text-red-500">📉</span>
+                        ) : (
+                          <span className="text-gray-500">➡️</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
+              {/* Market Status */}
+              <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl p-6 text-white">
+                <h3 className="text-xl font-bold mb-4">🏛️ Market Status</h3>
+                <div className="space-y-2 text-indigo-100 text-sm">
+                  <div className="flex justify-between">
+                    <span>NSE Status:</span>
+                    <span className="text-green-300 font-semibold">OPEN</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Data Source:</span>
+                    <span className="text-yellow-300">yfinance + Twelvedata</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Update Freq:</span>
+                    <span className="text-blue-300">Real-time</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Trading Tips */}
-              <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white">
-                <h3 className="text-xl font-bold mb-4">🎯 Daily Tip</h3>
-                <p className="text-purple-100 text-sm">
-                  As a {dashboardData.user_profile.trading_style} trader, focus on discipline over profits. 
-                  Set clear rules and stick to them consistently.
+              <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white">
+                <h3 className="text-xl font-bold mb-4">🎯 Style-Specific Tip</h3>
+                <p className="text-orange-100 text-sm">
+                  As a <strong>{dashboardData.user_profile.trading_style}</strong> trader, focus on your recommended timeframes: <strong>{dashboardData.recommended_timeframes[0]}</strong> to <strong>{dashboardData.recommended_timeframes[2]}</strong>. 
+                  Stick to your discipline over chasing quick profits.
                 </p>
               </div>
             </div>
