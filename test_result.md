@@ -182,15 +182,18 @@ backend:
 
   - task: "Angel One Authentication & Credentials Setup"
     implemented: true
-    working: "NA"
+    working: true
     file: ".env, angel_one_engine.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added Angel One API credentials to .env file including Trading API, Publisher API, Marketfeed API, Historical data API keys with client code (IIRA7535), password, and TOTP secret. Implemented TOTP-based authentication flow in Angel One engine."
+      - working: true
+        agent: "testing"
+        comment: "Angel One authentication and credentials setup is working correctly. The TOTP-based authentication flow is properly implemented. Successfully tested the authentication endpoint which returns a valid session token and expiry time."
 
   - task: "New Angel One Specific API Endpoints"
     implemented: true
