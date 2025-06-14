@@ -1,6 +1,6 @@
 """
-Modular Market Data Engine for Stock Market Intelligence Platform
-Supports multiple data sources: yfinance, Twelvedata, and extensible for premium APIs
+Enhanced Market Data Engine for Stock Market Intelligence Platform
+Supports multiple data sources: Angel One Smart API (primary), yfinance, Twelvedata (fallback)
 """
 
 import yfinance as yf
@@ -15,6 +15,7 @@ from dataclasses import dataclass
 import logging
 import os
 from dotenv import load_dotenv
+from angel_one_engine import angel_one_engine, StockData, SectorData
 
 load_dotenv()
 
