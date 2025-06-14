@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Stock Market Intelligence Platform with AI-based Trading Style Identifier - PHASE 2: Real-Time Market Data Integration with yfinance and Twelvedata for live NSE/BSE feeds"
+user_problem_statement: "Replace Alpha & TwelveData API with Angel One Smart API to fetch live data - Integration of Angel One Smart API for trading data, publisher data, marketfeed data, and historical data with fallback to existing sources"
 
 backend:
   - task: "API Endpoints Setup"
