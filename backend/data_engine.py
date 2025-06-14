@@ -43,13 +43,16 @@ class SectorData:
     volume: int
 
 class MarketDataEngine:
-    """Unified market data engine supporting multiple sources"""
+    """Enhanced market data engine supporting Angel One Smart API and fallback sources"""
     
     def __init__(self):
         self.twelvedata_api_key = os.getenv('TWELVEDATA_API_KEY')
         self.logger = logging.getLogger(__name__)
         
-        # NSE Top 50 stocks for quick access
+        # Primary data source: Angel One
+        self.angel_engine = angel_one_engine
+        
+        # NSE Top 50 stocks for quick access (fallback)
         self.nse_top_stocks = [
             'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'BHARTIARTL.NS', 'ICICIBANK.NS',
             'INFOSYS.NS', 'SBIN.NS', 'LICI.NS', 'ITC.NS', 'HINDUNILVR.NS',
@@ -75,16 +78,44 @@ class MarketDataEngine:
             'Infrastructure': ['LT.NS', 'POWERGRID.NS', 'NTPC.NS', 'COALINDIA.NS']
         }
 
-    async def get_live_stock_data(self, symbol: str, source: str = "yfinance") -> Optional[StockData]:
-        """Get real-time stock data from specified source"""
+    async def get_live_stock_data(self, symbol: str, source: str = "auto") -> Optional[StockData]:
+        """Get real-time stock data with Angel One primary and fallback sources"""
         try:
-            if source == "yfinance":
-                return await self._get_yfinance_data(symbol)
-            elif source == "twelvedata":
-                return await self._get_twelvedata_data(symbol)
-            else:
-                self.logger.warning(f"Unknown data source: {source}")
-                return None
+            # Try Angel One first (primary source)
+            if source == "auto" or source == "angel_one":
+                try:
+                    # Clean symbol for Angel One
+                    clean_symbol = symbol.replace('.NS', '').upper()
+                    angel_data = await self.angel_engine.get_live_stock_data(clean_symbol)
+                    if angel_data:
+                        self.logger.info(f"Successfully fetched data from Angel One for {symbol}")
+                        return angel_data
+                except Exception as e:
+                    self.logger.warning(f"Angel One failed for {symbol}: {str(e)}")
+            
+            # Fallback to yfinance
+            if source == "auto" or source == "yfinance":
+                try:
+                    yf_data = await self._get_yfinance_data(symbol)
+                    if yf_data:
+                        self.logger.info(f"Fallback to yfinance successful for {symbol}")
+                        return yf_data
+                except Exception as e:
+                    self.logger.warning(f"yfinance failed for {symbol}: {str(e)}")
+            
+            # Fallback to twelvedata
+            if source == "auto" or source == "twelvedata":
+                try:
+                    td_data = await self._get_twelvedata_data(symbol)
+                    if td_data:
+                        self.logger.info(f"Fallback to twelvedata successful for {symbol}")
+                        return td_data
+                except Exception as e:
+                    self.logger.warning(f"Twelvedata failed for {symbol}: {str(e)}")
+            
+            self.logger.error(f"All data sources failed for {symbol}")
+            return None
+            
         except Exception as e:
             self.logger.error(f"Error fetching data for {symbol}: {str(e)}")
             return None
