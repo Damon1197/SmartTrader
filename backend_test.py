@@ -578,6 +578,361 @@ def test_enhanced_dashboard_api():
     
     return True
 
+# Angel One Integration Tests
+
+def test_angel_one_status():
+    """Test the Angel One status API endpoint"""
+    response = requests.get(f"{API_BASE_URL}/angel/status")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check required fields
+    required_fields = ["authenticated", "auth_token_exists", "session_expiry", 
+                      "available_stocks", "supported_sectors"]
+    
+    for field in required_fields:
+        if field not in data:
+            print(f"Error: Response missing required field '{field}'")
+            return False
+    
+    print(f"Angel One Status: Authenticated: {data['authenticated']}, Auth Token Exists: {data['auth_token_exists']}")
+    print(f"Available Stocks: {data['available_stocks']}, Supported Sectors: {data['supported_sectors']}")
+    
+    return True
+
+def test_angel_one_authentication():
+    """Test the Angel One authentication API endpoint"""
+    response = requests.post(f"{API_BASE_URL}/angel/authenticate")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check required fields
+    required_fields = ["status", "message", "session_expiry"]
+    
+    for field in required_fields:
+        if field not in data:
+            print(f"Error: Response missing required field '{field}'")
+            return False
+    
+    if data["status"] != "success":
+        print(f"Error: Authentication failed with status {data['status']}")
+        return False
+    
+    print(f"Angel One Authentication: {data['message']}")
+    print(f"Session Expiry: {data['session_expiry']}")
+    
+    return True
+
+def test_angel_one_historical_data():
+    """Test the Angel One historical data API endpoint"""
+    symbols = ["RELIANCE", "TCS", "HDFCBANK"]
+    intervals = ["1day", "1week"]
+    days_options = [7, 30]
+    
+    all_passed = True
+    
+    for symbol in symbols:
+        for interval in intervals:
+            for days in days_options:
+                print(f"Testing historical data for {symbol} with interval {interval} and {days} days")
+                
+                # Send request
+                response = requests.get(f"{API_BASE_URL}/angel/historical/{symbol}?interval={interval}&days={days}")
+                
+                # Check status code
+                if response.status_code != 200:
+                    print(f"Error: Received status code {response.status_code} for {symbol}")
+                    print(f"Response: {response.text}")
+                    all_passed = False
+                    continue
+                
+                # Parse response
+                data = response.json()
+                
+                # Check required fields
+                required_fields = ["symbol", "interval", "days", "data", "source"]
+                
+                for field in required_fields:
+                    if field not in data:
+                        print(f"Error: Response for {symbol} missing required field '{field}'")
+                        all_passed = False
+                        break
+                
+                # Check if we have data
+                if not data["data"]:
+                    print(f"Error: No historical data returned for {symbol}")
+                    all_passed = False
+                    continue
+                
+                # Check data structure
+                sample_data = data["data"][0]
+                data_fields = ["date", "open", "high", "low", "close", "volume"]
+                
+                for field in data_fields:
+                    if field not in sample_data:
+                        print(f"Error: Historical data for {symbol} missing field '{field}'")
+                        all_passed = False
+                        break
+                
+                print(f"Successfully retrieved {len(data['data'])} historical data points for {symbol}")
+                
+                # Only test one combination per symbol to avoid too many API calls
+                break
+            break
+    
+    return all_passed
+
+def test_data_sources_comparison():
+    """Test the data sources comparison API endpoint"""
+    symbols = ["RELIANCE", "TCS", "HDFCBANK"]
+    
+    all_passed = True
+    
+    for symbol in symbols:
+        print(f"Testing data sources comparison for {symbol}")
+        
+        # Send request
+        response = requests.get(f"{API_BASE_URL}/data-sources/comparison/{symbol}")
+        
+        # Check status code
+        if response.status_code != 200:
+            print(f"Error: Received status code {response.status_code} for {symbol}")
+            print(f"Response: {response.text}")
+            all_passed = False
+            continue
+        
+        # Parse response
+        data = response.json()
+        
+        # Check required fields
+        required_fields = ["symbol", "comparison", "timestamp"]
+        
+        for field in required_fields:
+            if field not in data:
+                print(f"Error: Response for {symbol} missing required field '{field}'")
+                all_passed = False
+                break
+        
+        # Check comparison data
+        comparison = data["comparison"]
+        sources = ["angel_one", "yfinance", "twelvedata"]
+        
+        for source in sources:
+            if source not in comparison:
+                print(f"Warning: Source '{source}' not in comparison data for {symbol}")
+                continue
+            
+            source_data = comparison[source]
+            
+            if source_data.get("status") == "success":
+                required_source_fields = ["price", "change_percent", "volume"]
+                
+                for field in required_source_fields:
+                    if field not in source_data:
+                        print(f"Error: {source} data for {symbol} missing field '{field}'")
+                        all_passed = False
+                        break
+        
+        # Print comparison results
+        print(f"Data source comparison for {symbol}:")
+        for source, source_data in comparison.items():
+            if source_data.get("status") == "success":
+                print(f"- {source}: Price: {source_data.get('price')}, Change: {source_data.get('change_percent')}%")
+            else:
+                print(f"- {source}: {source_data.get('status')} - {source_data.get('error', 'No error details')}")
+    
+    return all_passed
+
+def test_live_stock_data_with_angel_one():
+    """Test the live stock data API with Angel One as primary source"""
+    symbols = ["RELIANCE", "TCS", "HDFCBANK"]
+    
+    all_passed = True
+    
+    for symbol in symbols:
+        print(f"Testing live stock data for {symbol} using auto source (Angel One primary)")
+        
+        # Send request with auto source (should use Angel One as primary)
+        response = requests.get(f"{API_BASE_URL}/market/live/{symbol}?source=auto")
+        
+        # Check status code
+        if response.status_code != 200:
+            print(f"Error: Received status code {response.status_code} for {symbol}")
+            print(f"Response: {response.text}")
+            all_passed = False
+            continue
+        
+        # Parse response
+        data = response.json()
+        
+        # Check required fields
+        required_fields = ["symbol", "price", "change", "change_percent", "volume", 
+                          "high", "low", "open"]
+        
+        for field in required_fields:
+            if field not in data:
+                print(f"Error: Response for {symbol} missing required field '{field}'")
+                all_passed = False
+                break
+        
+        # Check if data source is Angel One
+        if "data_source" in data and "angel_one" not in data["data_source"]:
+            print(f"Warning: Data source for {symbol} is not Angel One: {data['data_source']}")
+        
+        print(f"Successfully retrieved data for {symbol}: Price: {data.get('price')}, Change: {data.get('change_percent')}%")
+    
+    return all_passed
+
+def test_sector_performance_with_angel_one():
+    """Test the sector performance API with Angel One as primary source"""
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/market/sectors")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check if sectors exist
+    if "sectors" not in data:
+        print("Error: 'sectors' field missing from response")
+        return False
+    
+    sectors = data["sectors"]
+    
+    # Check if we have sectors
+    if not sectors:
+        print("Error: No sectors returned")
+        return False
+    
+    # Check structure of each sector
+    for i, sector in enumerate(sectors):
+        # Check required fields
+        required_fields = ["sector", "performance", "top_performers", "market_cap", "volume"]
+        for field in required_fields:
+            if field not in sector:
+                print(f"Error: Sector {i+1} missing required field '{field}'")
+                return False
+    
+    print(f"Successfully verified {len(sectors)} sectors with proper structure")
+    
+    # Print top performing sectors
+    sorted_sectors = sorted(sectors, key=lambda x: x["performance"], reverse=True)
+    print("Top performing sectors:")
+    for sector in sorted_sectors[:3]:
+        print(f"- {sector['sector']}: {sector['performance']}%")
+    
+    return True
+
+def test_market_movers_with_angel_one():
+    """Test the market movers API with Angel One as primary source"""
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/market/movers")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check required sections
+    required_sections = ["gainers", "losers", "most_active"]
+    
+    for section in required_sections:
+        if section not in data:
+            print(f"Error: Market movers missing required section '{section}'")
+            return False
+        
+        # Check if we have data in each section
+        if not data[section]:
+            print(f"Warning: No data in '{section}' section")
+            continue
+        
+        # Check structure of each stock
+        for i, stock in enumerate(data[section]):
+            # Check required fields
+            required_fields = ["symbol", "price", "change_percent", "volume"]
+            for field in required_fields:
+                if field not in stock:
+                    print(f"Error: Stock {i+1} in {section} missing required field '{field}'")
+                    return False
+    
+    # Print top gainers and losers
+    if data["gainers"]:
+        print("Top gainers:")
+        for stock in data["gainers"][:3]:
+            print(f"- {stock['symbol']}: {stock['change_percent']}%")
+    
+    if data["losers"]:
+        print("Top losers:")
+        for stock in data["losers"][:3]:
+            print(f"- {stock['symbol']}: {stock['change_percent']}%")
+    
+    return True
+
+def test_market_indices_with_angel_one():
+    """Test the market indices API with Angel One as primary source"""
+    # Send request
+    response = requests.get(f"{API_BASE_URL}/market/indices")
+    
+    # Check status code
+    if response.status_code != 200:
+        print(f"Error: Received status code {response.status_code}")
+        print(f"Response: {response.text}")
+        return False
+    
+    # Parse response
+    data = response.json()
+    
+    # Check if indices exist
+    if "indices" not in data:
+        print("Error: 'indices' field missing from response")
+        return False
+    
+    indices = data["indices"]
+    
+    # Check if we have indices
+    if not indices:
+        print("Error: No indices returned")
+        return False
+    
+    # Check structure of each index
+    for i, index in enumerate(indices):
+        # Check required fields
+        required_fields = ["name", "symbol", "price", "change_percent"]
+        for field in required_fields:
+            if field not in index:
+                print(f"Error: Index {i+1} missing required field '{field}'")
+                return False
+    
+    # Print indices data
+    print("Market indices:")
+    for index in indices:
+        print(f"- {index['name']}: {index['price']} ({'+' if index['change_percent'] >= 0 else ''}{index['change_percent']}%)")
+    
+    return True
+
 def run_all_tests():
     """Run all tests in sequence"""
     # Phase 1 Tests
@@ -617,6 +972,33 @@ def run_all_tests():
     
     # Test enhanced dashboard API
     run_test("Enhanced Dashboard API", test_enhanced_dashboard_api)
+    
+    # Phase 3 Tests - Angel One Integration
+    print("\n===== PHASE 3 TESTS - ANGEL ONE INTEGRATION =====")
+    
+    # Test Angel One status API
+    run_test("Angel One Status API", test_angel_one_status)
+    
+    # Test Angel One authentication API
+    run_test("Angel One Authentication API", test_angel_one_authentication)
+    
+    # Test Angel One historical data API
+    run_test("Angel One Historical Data API", test_angel_one_historical_data)
+    
+    # Test data sources comparison API
+    run_test("Data Sources Comparison API", test_data_sources_comparison)
+    
+    # Test live stock data with Angel One as primary source
+    run_test("Live Stock Data with Angel One API", test_live_stock_data_with_angel_one)
+    
+    # Test sector performance with Angel One as primary source
+    run_test("Sector Performance with Angel One API", test_sector_performance_with_angel_one)
+    
+    # Test market movers with Angel One as primary source
+    run_test("Market Movers with Angel One API", test_market_movers_with_angel_one)
+    
+    # Test market indices with Angel One as primary source
+    run_test("Market Indices with Angel One API", test_market_indices_with_angel_one)
     
     # Print summary
     print(f"\n{'='*80}\nTest Summary\n{'='*80}")
